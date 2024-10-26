@@ -22,7 +22,8 @@ CLIENT_SECRET = getenv('CLIENT_SECRET')
 
 client_id = CLIENT_ID
 client_secret = CLIENT_SECRET
-redirect_uri = 'http://localhost:5500/frontend/index.html'  # Client-side app callback URL
+#redirect_uri = 'http://localhost:5500/index.html'  # Client-side app callback URL
+redirect_uri = 'https://househubng.netlify.app'
 
 authorization_base_url = 'https://accounts.google.com/o/oauth2/auth'
 token_url = 'https://accounts.google.com/o/oauth2/token'
