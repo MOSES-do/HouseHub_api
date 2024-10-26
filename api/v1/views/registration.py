@@ -62,13 +62,13 @@ def register():
     data = request.get_json(silent=True)
     if data is None:
         abort(400, 'Not a JSON')
-    if "email" not in data:
-        abort(400, 'Missing email') 
     
     email = data.get('email')
     password = data.get('password')
     if not email:
         return jsonify({'error': 'Missing data'}), 400
+    if not password:
+        return jsonify({'error': 'Password is required'}), 400
 
     session = Session()
     if session.query(Registration).filter_by(email=email).first() is not None:
@@ -80,9 +80,7 @@ def register():
                     )
     if password: # thsi line is for testing purpose here
         new_user.set_password(password)
-    #session.add(new_user)
     storage.new(new_user)
-    #session.commit()
     storage.save()
     session.close()
 
