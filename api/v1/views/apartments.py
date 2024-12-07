@@ -1,18 +1,13 @@
 #!/usr/bin/python3
-"""routes for users"""
-from flask import Flask, jsonify, abort, request, url_for, session, redirect
+"""routes for apartments"""
+from flask import Flask, jsonify, abort, request, session
 from models import storage
 from models.apartments import Apartment
 from api.v1.views import app_views
-from flask_jwt_extended import JWTManager,create_access_token, jwt_required, get_jwt_identity, get_jti
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from os import getenv, urandom
 
 Session = storage._DBStorage__session
-
-app = Flask(__name__)
-# manage user authentication on page request
-jwt = JWTManager(app)
-
 
 
 @app_views.route('/apartments', methods=['GET'],
@@ -23,15 +18,14 @@ def registered_apartments(apartments=None):
     s = storage.all(Apartment)
     location = request.args.get('location')
     if location:
-        s = storage.all(Apartment)
         for key, value in s.items():
             if value.location == location:
                 apartments.append(value.to_dict())
         return jsonify(apartments)
-    else:
-        for obj in s.values():
-            apartments.append(obj.to_dict())
-        return jsonify(apartments), 200
+    
+    for obj in s.values():
+        apartments.append(obj.to_dict())
+    return jsonify(apartments), 200
 
 
 @app_views.route('/apartment/<apartment_id>', methods=['GET'],
@@ -69,8 +63,6 @@ def new_property():
         return jsonify({'error': 'Missing data'}), 400
 
     session = Session()
-    #if session.query(Apartment).filter_by(email=email).first() is not None:
-    #    return jsonify({'error': 'Email already exists'}), 401
 
     # Save new user to database
     new_property = Apartment(

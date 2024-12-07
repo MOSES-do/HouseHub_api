@@ -1,21 +1,19 @@
 #!/usr/bin/python3
 """routes for users"""
-from flask import Flask, jsonify, abort, request, url_for, session, redirect
+from flask import Flask, jsonify, abort, request, session
 from models import storage
 from models.registration import Registration
 from models.logout import TokenBlacklist
 from api.v1.views import app_views
 from requests_oauthlib import OAuth2Session
-from flask_jwt_extended import JWTManager,create_access_token, jwt_required, get_jwt_identity, get_jti
-#from authlib.integrations.flask_client import OAuth
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jti
+from ..services.jwt_service import create_jwt_token
 from os import getenv, urandom
+from requests_oauthlib import OAuth2Session
+from api.v1.extensions import jwt
 
 Session = storage._DBStorage__session
 
-app = Flask(__name__)
-# manage user authentication on page request
-jwt = JWTManager(app)
-#oauth = OAuth(app)
 
 CLIENT_ID = getenv('CLIENT_ID')
 CLIENT_SECRET = getenv('CLIENT_SECRET')
@@ -87,27 +85,16 @@ def register():
     return jsonify({'message': 'User registered successfully'}), 201
 
 
-
-# Login endpoint
-@app_views.route("/login", methods=["POST"],
-                 strict_slashes=False, endpoint='login_user')
-def login_user():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    if not email or not password:
-        return jsonify({'error': 'Missing data'}), 400
-
+# Protected endpoint
+@app_views.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user_id = get_jwt_identity()
     session = Session()
-    user = session.query(Registration).filter_by(email=email).first()
+    user = session.query(Registration).get(current_user_id)
     session.close()
 
-    if user is None or not user.check_password(password):
-        return jsonify({'error': 'Invalid credentials'}), 401
-    
-    access_token = create_access_token(identity={'id':user.id, 'email':user.email})
-    return jsonify({'token': access_token}), 200
-
+    return jsonify({'message': f'Hello, {user.email}!'}), 200
 
 
 # Function to get current user info
@@ -129,6 +116,27 @@ def current_user():
         session.close()
         return jsonify({"msg": "User not found"}), 404
 
+# LOGIN/OUT 
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+# Login endpoint
+@app_views.route("/login", methods=["POST"],
+                 strict_slashes=False, endpoint='login_user')
+def login_user():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    if not email or not password:
+        return jsonify({'error': 'Missing data'}), 400
+
+    session = Session()
+    user = session.query(Registration).filter_by(email=email).first()
+    session.close()
+
+    if user is None or not user.check_password(password):
+        return jsonify({'error': 'Invalid credentials'}), 401
+    
+    access_token = create_jwt_token(user.id, user.email)
+    return jsonify({'token': access_token}), 200
 
 # Logout endpoint
 @app_views.route("/logout", methods=["POST"],
@@ -156,17 +164,8 @@ def check_if_token_is_blacklisted(jwt_header, jwt_payload):
     return token is not None
 
 
-# Protected endpoint
-@app_views.route('/protected', methods=['GET'])
-@jwt_required()
-def protected():
-    current_user_id = get_jwt_identity()
-    session = Session()
-    user = session.query(Registration).get(current_user_id)
-    session.close()
-
-    return jsonify({'message': f'Hello, {user.email}!'}), 200
-
+# GOOGLE AUTH
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 @app_views.route('/login/google')
 def login_google():
     google = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=['openid', 'email', 'profile'])
@@ -193,8 +192,7 @@ def token():
             storage.save()
 
         # Generate JWT token
-        #create a JWT token for the user
-        access_token = create_access_token(identity={'id':user.id, 'email':user.email})
+        access_token = create_jwt_token(user.id, user.email)
         session.close()
         return jsonify({'token': access_token}), 200
         

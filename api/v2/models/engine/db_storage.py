@@ -1,40 +1,17 @@
+
 #!/usr/bin/python3
 """
 Contains the class DBStorage
 """
 
-import models
-from models.base_model import BaseModel, Base
-from models.registration import Registration
-from models.logout import TokenBlacklist
-from models.apartments import Apartment
-from os import getenv
-import sqlalchemy
-from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy import create_engine, MetaData, Table
+from v2.extensions import db
 
-classes = {"Registration": Registration, "TokenBlacklist": TokenBlacklist, "Apartment":Apartment}
+classes = {"Registration": Registration, "TokenBlacklist": TokenBlacklist}
 
 
 class DBStorage:
     """interaacts with the MySQL database"""
-    __engine = None
-    __session = None
-
-    def __init__(self):
-        """Instantiate a DBStorage object"""
-        HBNB_MYSQL_USER = getenv('HBNB_MYSQL_USER')
-        HBNB_MYSQL_PWD = getenv('HBNB_MYSQL_PWD')
-        HBNB_MYSQL_HOST = getenv('HBNB_MYSQL_HOST')
-        HBNB_MYSQL_DB = getenv('HBNB_MYSQL_DB')
-        HBNB_ENV = getenv('HBNB_ENV')
-        self.__engine = create_engine('mysql+mysqldb://{}:{}@{}/{}'.
-                                      format(HBNB_MYSQL_USER,
-                                             HBNB_MYSQL_PWD,
-                                             HBNB_MYSQL_HOST,
-                                             HBNB_MYSQL_DB))
-        if HBNB_ENV == "test":
-            Base.metadata.drop_all(self.__engine)
+    __session = db
 
     def all(self, cls=None):
         """query on the current database session"""
@@ -55,6 +32,7 @@ class DBStorage:
         """commit all changes of the current database session"""
         self.__session.commit()
 
+    """
     def table_names(self):
         metadata = MetaData()
         metadata.reflect(bind=self.__engine)
@@ -71,18 +49,13 @@ class DBStorage:
                     cls.append(table_name)
         cls.sort(key=str.lower)
         return cls
+    """
 
     def delete(self, obj=None):
         """delete from the current database session obj if not None"""
         if obj is not None:
             self.__session.delete(obj)
 
-    def reload(self):
-        """reloads data from the database"""
-        Base.metadata.create_all(self.__engine)
-        sess_factory = sessionmaker(bind=self.__engine, expire_on_commit=False)
-        Session = scoped_session(sess_factory)
-        self.__session = Session
 
     def close(self):
         """call remove() method on the private session attribute"""
