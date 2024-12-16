@@ -1,32 +1,16 @@
 #!/usr/bin/python3
 """routes for users"""
-from flask import Flask, jsonify, abort, request, redirect, session
+from flask import Flask, jsonify, request, session
 from models import storage
 from models.registration import Registration
 from models.logout import TokenBlacklist
 from api.v1.views import app_views
-from requests_oauthlib import OAuth2Session
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jti
 from ..services.jwt_service import create_jwt_token
-from os import getenv, urandom
-from requests_oauthlib import OAuth2Session
+from os import getenv
 from api.v1.extensions import jwt
 
 Session = storage._DBStorage__session
-
-
-CLIENT_ID = getenv('CLIENT_ID')
-CLIENT_SECRET = getenv('CLIENT_SECRET')
-
-client_id = CLIENT_ID
-client_secret = CLIENT_SECRET
-#redirect_uri = 'http://localhost:5500/oauth2/callback'  # Client-side app callback URL
-redirect_uri = 'https://househubng.netlify.app/oauth2/callback'
-
-authorization_base_url = 'https://accounts.google.com/o/oauth2/auth'
-token_url = 'https://accounts.google.com/o/oauth2/token'
-user_info_url = 'https://www.googleapis.com/oauth2/v1/userinfo'
-
 
 @app_views.route('/registered_users', methods=['GET'],
                  strict_slashes=False, endpoint='registered_users')
@@ -115,174 +99,3 @@ def current_user():
     else:
         session.close()
         return jsonify({"msg": "User not found"}), 404
-
-# LOGIN/OUT 
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-# Login endpoint
-@app_views.route("/login", methods=["POST"],
-                 strict_slashes=False, endpoint='login_user')
-def login_user():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    if not email or not password:
-        return jsonify({'error': 'Missing data'}), 400
-
-    session = Session()
-    user = session.query(Registration).filter_by(email=email).first()
-    session.close()
-
-    if user is None or not user.check_password(password):
-        return jsonify({'error': 'Invalid credentials'}), 401
-    
-    access_token = create_jwt_token(user.id, user.email)
-    return jsonify({'token': access_token}), 200
-
-# Logout endpoint
-@app_views.route("/logout", methods=["POST"],
-                 strict_slashes=False, endpoint='logout')
-@jwt_required()
-def logout():
-    jti = get_jti(request.headers['Authorization'].split(' ')[1])
-    #print(jti)
-    session = Session()
-    blacklist_token = TokenBlacklist(jti=jti)
-    storage.new(blacklist_token)
-    storage.save()
-    session.close()
-    return jsonify({'message': 'Successfully logged out'}), 200
-
-
-# Check if a token is blacklisted 
-# part of logout functionality
-@jwt.token_in_blocklist_loader
-def check_if_token_is_blacklisted(jwt_header, jwt_payload):
-    jti = jwt_payload['jti']
-    session = Session()
-    token = session.query(TokenBlacklist).filter_by(jti=jti).first()
-    session.close()
-    return token is not None
-
-
-# GOOGLE AUTH
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-@app_views.route('/login/google')
-def login_google():
-    google = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=['openid', 'email', 'profile'])
-    authorization_url, state = google.authorization_url(authorization_base_url, access_type='offline')
-    session['oauth_state'] = state
-    return jsonify({'authorization_url': authorization_url, 'response': "ok"})
-
-@app_views.route('/oauth2/callback', methods=["POST"])
-def oauth2_callback():
-    oauth_code = request.json.get('code')
-    
-    if oauth_code:
-        google = OAuth2Session(client_id, redirect_uri=redirect_uri)
-        try:
-            token = google.fetch_token(token_url, client_secret=client_secret, code=oauth_code)
-        except Exception as e:
-            return jsonify({'error': f'Failed to fetch token: {str(e)}'}), 400
-
-        user_info = google.get(user_info_url).json()
-        user_email = user_info.get('email')
-        
-        if user_email:
-            # Check if user exists, if not, add to the database
-            session = Session()
-            user = session.query(Registration).filter_by(email=user_email).first()
-            if not user:
-                user = Registration(email=user_email)
-                storage.new(user)
-                storage.save()
-
-            # Generate JWT token
-            access_token = create_jwt_token(user.id, user.email)
-            session.close()
-            redirect_url = 'https://househubng.netlify.app/listings.html'
-
-            return jsonify({
-                'token': access_token,
-                'redirect_url': redirect_url
-            }), 200
-        else:
-            return jsonify({'error': 'Failed to fetch user email'}), 400
-    else:
-        return jsonify({'error': 'Authorization code missing'}), 400
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-@app_views.route("/users/<user_id>", methods=["PUT"],
-                 strict_slashes=False, endpoint='update_user')
-def update_user(user_id):
-    
-    update user object by ID
-    user_json = request.get_json(silent=True)
-    if user_json is None:
-        abort(400, 'Not a JSON')
-    user_obj = storage.get(User, user_id)
-    if user_obj is None:
-        abort(404)
-    for key, val in user_json.items():
-        cond: below is a key exclusion to ensure
-        id, created_at & updated_at don't get updated
-        if key not in ["id", "created_at", "updated_at", "email"]:
-            setattr(user_obj, key, val)
-    user_obj.save()
-    return jsonify(user_obj.to_dict())
-
-
-@app_views.route('/users/<user_id>', methods=['DELETE'],
-                 strict_slashes=False, endpoint='del_user')
-def del_user(user_id):
-    delete user based on id
-   
-    entity = storage.get(User, user_id)
-    if entity is None:
-        abort(404, description="State not found")
-    storage.delete(entity)
-    storage.save()
-    return jsonify({})
-"""
