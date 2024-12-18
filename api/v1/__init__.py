@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
 from flask import Flask, jsonify, make_response
-from api.v1.extensions import oauth, jwt, cors
+from flask_mail import Mail
+from api.v1.extensions import oauth, jwt, cors, mail
 from models import storage
 from api.v1.views import app_views
 import os
@@ -16,6 +17,7 @@ def create_app(config_class='api.config.DevelopmentConfig'):
     # Initialize extensions with app
     oauth.init_app(app)
     jwt.init_app(app)
+    mail.init_app(app)
     cors.init_app(app, resources={r"/*": {"origins": "*"}})
 
     # Register blueprints

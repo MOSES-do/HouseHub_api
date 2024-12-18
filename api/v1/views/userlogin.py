@@ -56,5 +56,3 @@ def check_if_token_is_blacklisted(jwt_header, jwt_payload):
     token = session.query(TokenBlacklist).filter_by(jti=jti).first()
     session.close()
     return token is not None
-
-
