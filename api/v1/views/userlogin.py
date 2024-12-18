@@ -29,7 +29,7 @@ def login_user():
     if user is None or not user.check_password(password):
         return jsonify({'error': 'Invalid credentials'}), 401
     
-    access_token = create_jwt_token(user.id, user.email)
+    access_token = create_jwt_token(user.id, user.email, user.is_verified)
     return jsonify({'token': access_token}), 200
 
 # Logout endpoint

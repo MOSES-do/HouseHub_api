@@ -3,6 +3,7 @@
 from api.v1 import create_app
 from models import storage
 from api.v1.config import DevelopmentConfig
+from api.v1.extensions import mail
 import os 
 
 host = os.environ.get('HOST', '0.0.0.0')

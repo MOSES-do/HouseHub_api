@@ -6,9 +6,9 @@ import jwt
 from datetime import datetime, timedelta
 
 
-def create_jwt_token(user_id, user_email):
+def create_jwt_token(user_id, user_email, is_verified=None):
     # Generate the token; expiration is automatically set by Flask-JWT-Extended
-    access_token = create_access_token(identity={'id':user_id, 'email':user_email})
+    access_token = create_access_token(identity={'id':user_id, 'email':user_email, 'verified':is_verified})
     return access_token
 
 def create_jwt_token_verify_email(user_id, secret_key, expires_in=None):
