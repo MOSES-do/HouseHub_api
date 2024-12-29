@@ -5,7 +5,7 @@ import models
 from models.base_model import BaseModel, Base
 from os import getenv
 import sqlalchemy
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -14,6 +14,9 @@ class Registration(BaseModel, Base):
     __tablename__ = 'register_user'
     email = Column(String(128), nullable=False)
     password_hash = Column(String(1000), nullable=True)
+    is_verified = Column(Boolean, default=False)
+    reset_token = Column(String(500), nullable=True)
+    reset_token_expiration = Column(DateTime, nullable=True)
     #users = relationship("", backref="user")
 
     def has_password(self):
@@ -22,7 +25,8 @@ class Registration(BaseModel, Base):
 
     def __init__(self, *args, **kwargs):
         """initializes user"""
-        super().__init__(*args, **kwargs) 
+        super().__init__(*args, **kwargs)
+        self.is_verified = False
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

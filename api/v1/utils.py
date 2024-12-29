@@ -41,7 +41,7 @@ def send_password_reset_email(mail, user):
     reset_url = f"https://aceme.tech{url_for('app_views.reset_password', token=token)}"
 
     msg = Message(
-            subject="Reset You Password",
+            subject="Reset Your Password",
                 sender=sender,
                 recipients=[user.email],
                 body= f"Click the link to reset your password: {reset_url}"

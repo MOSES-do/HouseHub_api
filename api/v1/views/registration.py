@@ -90,7 +90,9 @@ def protected():
 def current_user():
     current_user_identity = get_jwt_identity()
     db = Session()
+    
     user = db.query(Registration).filter_by(id=current_user_identity['id']).first()
+
     if user:
         user_info = {
             'id': user.id,
