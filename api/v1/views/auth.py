@@ -57,11 +57,9 @@ def oauth2_callback():
             # Generate JWT token
             access_token = create_jwt_token(user.id, user.email)
             session.close()
-            redirect_url = 'https://househubng.netlify.app/listings.html'
 
             return jsonify({
                 'token': access_token,
-                'redirect_url': redirect_url
             }), 200
         else:
             return jsonify({'error': 'Failed to fetch user email'}), 400
